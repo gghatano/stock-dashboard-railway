@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>株価ダッシュボード</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-green {
+            0%, 100% { background-color: rgb(220, 252, 231); }
+            50% { background-color: rgb(187, 247, 208); }
+        }
+        @keyframes pulse-red {
+            0%, 100% { background-color: rgb(254, 226, 226); }
+            50% { background-color: rgb(252, 165, 165); }
+        }
+        .price-up { animation: pulse-green 1s ease-in-out; }
+        .price-down { animation: pulse-red 1s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-800 mb-2">株価ダッシュボード</h1>
+                    <p class="text-gray-600">日鉄ソリューションズ & 小野薬品工業</p>
+                </div>
+                <div class="flex gap-2">
+                    <button 
+                        hx-get="/api/stocks/partial" 
+                        hx-target="#stocks-container"
+                        hx-swap="innerHTML"
+                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm">
+                        手動更新
+                    </button>
+                    <a href="/health" 
+                       target="_blank"
+                       class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm">
+                        ヘルスチェック
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div id="stocks-container" 
+             hx-get="/api/stocks/partial" 
+             hx-trigger="every 30s"
+             hx-swap="innerHTML">
+            {% include 'stocks_partial.html' %}
+        </div>
+
+        <footer class="mt-8 text-center text-gray-500 text-sm">
+            <p>データは30秒ごとに自動更新されます（キャッシュ有効期限: 30秒）</p>
+            <p class="mt-2">※ 東京証券取引所の取引時間外は前営業日の終値が表示されます</p>
+            <p class="mt-2 text-xs">タイムゾーン: 日本標準時 (JST)</p>
+        </footer>
+    </div>
+</body>
+</html>
