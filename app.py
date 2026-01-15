@@ -118,9 +118,9 @@ def get_stock_data(ticker: str) -> Dict:
     try:
         logger.info(f"Fetching fresh data for {ticker}")
         stock = yf.Ticker(ticker)
-        
-        # 直近のデータを取得（5日分）
-        hist = stock.history(period="5d")
+
+        # 直近のデータを取得（10日分）
+        hist = stock.history(period="10d")
         
         if hist.empty:
             logger.warning(f"No historical data found for {ticker}")
@@ -197,6 +197,57 @@ def get_stock_data(ticker: str) -> Dict:
         with _cache_lock:
             _cache[ticker] = (error_data, now)
         return error_data
+
+
+def get_exchange_rate() -> float:
+    """
+    ドル円の為替レートを取得（キャッシュ機能付き）
+
+    Returns:
+        float: ドル円レート（例: 147.52）
+              エラー時は0.0を返す
+    """
+    ticker = "USDJPY=X"
+    now = get_jst_now()
+
+    # スレッドセーフなキャッシュチェック
+    if is_cache_valid(ticker, now):
+        logger.info(f"Using cached exchange rate")
+        with _cache_lock:
+            data, _ = _cache[ticker]
+        return data.get("rate", 0.0)
+
+    try:
+        logger.info(f"Fetching fresh exchange rate")
+        forex = yf.Ticker(ticker)
+        hist = forex.history(period="1d")
+
+        if hist.empty:
+            logger.warning(f"No exchange rate data found")
+            return 0.0
+
+        rate = hist['Close'].iloc[-1]
+
+        # NaN値のチェック
+        if math.isnan(rate):
+            logger.error(f"Invalid exchange rate (NaN)")
+            return 0.0
+
+        # キャッシュに保存
+        rate_data = {
+            "rate": rate,
+            "last_update": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "error": False
+        }
+        with _cache_lock:
+            _cache[ticker] = (rate_data, now)
+
+        logger.info(f"Exchange rate: {rate:.2f}")
+        return rate
+
+    except Exception as e:
+        logger.error(f"Error fetching exchange rate: {e}", exc_info=True)
+        return 0.0
 
 
 def get_all_stocks_data() -> List[Dict]:
